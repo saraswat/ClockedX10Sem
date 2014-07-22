@@ -151,7 +151,7 @@ A:S hb0 A:T :- S hb0 T.
     For this we need B0 to be a strictly before prefix of B,
     and we need the remainder B1 to be just a sequence of 0's and 1's.
   */
-  advanceBefore(S, Alpha, B, R):- 
+  advancesBefore(S, Alpha, B, R):- 
     path(S, R, advance),    % gen all possible R's in S
     app(Alpha, cf:B0B1, R), % they must have an alpha prefix: TODO fold this into the gen
     strict_before(B0, B), 
@@ -180,16 +180,11 @@ A:S hb0 A:T :- S hb0 T.
    than the phase number of statements executed in that phase.
 */
 
-phi(S, P, Alpha, PreB, N, Z) :- 
+phi(S, P, Alpha, PreB, N, AtEnd, Z) :- 
     alphaCFPrefix(PreB, B, Z), 
-    (bagof(R, advanceBefore(S, Alpha, B, R), Rs); Rs=[]),
-    length(Rs, N1),
-    path(S, P, SP), adjustPath(SP, PreB, N1, N).
-
-adjustPath(advance, Pre, M1, M):- not_cfs(Pre), M is M1+0.1.
-adjustPath(advance, Pre, M, M):- \+(not_cfs(Pre)).
-adjustPath(X, _Pre, M, M) :- X \== advance.
-
+    (bagof(R, advancesBefore(S, Alpha, B, R), Rs); Rs=[]),
+    length(Rs, N),
+    path(S, P, SP), atEnd(SP, PreB, AtEnd).
 
   alphaCFPrefix(nil,  nil, nil).
   alphaCFPrefix(f:_,  nil, nil).
@@ -198,6 +193,11 @@ adjustPath(X, _Pre, M, M) :- X \== advance.
   alphaCFPrefix(0:S,  0:T, Z):- alphaCFPrefix(S, T, Z).
   alphaCFPrefix(1:S,  1:T, Z):- alphaCFPrefix(S, T, Z).
   alphaCFPrefix(ca:S,ca:T, Z):- alphaCFPrefix(S, T, Z).
+
+  atEnd(advance, Pre,  true):- not_cfs(Pre).
+  atEnd(advance, Pre, false):- \+(not_cfs(Pre)).
+  atEnd(X,      _Pre, false):- X \== advance.
+
 
 /**
 hb(+S, +P, +Q):- 
@@ -212,12 +212,15 @@ hb(S, P, Q) :-
   app(Alpha, cf:PreBP, P), 
   app(Alpha, cf:PreBQ, Q), 
   ok(PreBP, PreBQ),
-
-  phi(S, Q, Alpha, PreBQ, N, _), 
-  phi(S, P, Alpha, PreBP, M, Z), Z \==a,
-  M < N.
-
+  phi(S, Q, Alpha, PreBQ, N, AtEndQ, _), 
+  phi(S, P, Alpha, PreBP, M, AtEndP, Z), Z \==a,
+  beforeI(M, AtEndP, N, AtEndQ).
 hb(_, P, Q) :- P hb0 Q.
+
+beforeI(M, false, N,  true) :- (M =< N).
+beforeI(M, false, N, false) :- (M < N).
+beforeI(M, true,  N,     _) :- (M < N).
+
 
 ok(0:A,   0:B):- ok(A, B).
 ok(1:A,   1:B):- ok(A, B).
