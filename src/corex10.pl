@@ -13,7 +13,7 @@
 /*
   Simplified version of the semantics in x10.pl.
 */
-:-module(smallx10, [
+:-module(corex10, [
 % 1000 xfy ,
 	     op(998, xfy, ';'),  % tighter than a ,; represents sequential comp
 	     op(997, xfy, '=>'),  % one step reduction operator
@@ -36,7 +36,7 @@
              path/3,
 	     isClockedStuck/1,
 	     hasYield/2,
-	     hb/3
+	     hb/3, app/3, eval/3
 	]).
 :-use_module(library(assoc)).
 
@@ -378,7 +378,3 @@ update(L, Lv, Iv, Rv, H, HH):- put_assoc(Iv, Lv, Rv, Xv1), put_assoc(L, H, Xv1, 
 update(X, Val, H, HH) :- atom(X), put_assoc(X, H, Val, HH).
 
 
-/**
-Show: for all S, H. clockedStmt(S),  c(S,H)=> c(SS,HH) implies clockedStmt(SS).
-Show: for all S, H. clockedStmt(S),  isClockedStuck(S), c(S,H)=> c(SS,HH) implies isClockedStuck(SS).
-*/
