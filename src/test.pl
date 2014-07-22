@@ -1,3 +1,15 @@
+/*
+ *  This file is part of the X10 project (http://x10-lang.org).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright IBM Corporation 2014.
+ * Based on initial code from Paul Feautrier.
+ */
+
 /**
 Testing framework for X10 computation trees.
 
@@ -43,7 +55,7 @@ of interest to them (e.g. x[1]=1 and x[2]=2) occur uniquely
 in S.
        
 */
-:- use_module(x10vj).
+:- use_module(x10).
 
 testAll(Verbose) :- 
    myReduceTest(Name, X, As),

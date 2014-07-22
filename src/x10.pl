@@ -1,4 +1,19 @@
 /*
+ *  This file is part of the X10 project (http://x10-lang.org).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright IBM Corporation 2014.
+ * Based on initial code from Paul Feautrier.
+ */
+/*
+
+Mon Jul 21 23:12:40 EDT 2014
+  -- Moved to Git repository ClockedX10Sem
+
 Mon Jul 21 17:08:31 EDT 2014
   -- Introduced phase distinction between in-phase basic actions and the advance that terminates a phase.
 
@@ -98,7 +113,7 @@ vj TODO: Check this works with Gnu Prolog.
 
       or you can build your own examples and submit them at the prompt.
 */
-:-module(x10vj, [
+:-module(x10, [
 % 1000 xfy ,
 	     op(998, xfy, ';'),  % tighter than a ,; represents sequential comp
 	     op(997, xfy, '=>'),  % one step reduction operator
@@ -137,10 +152,10 @@ vj TODO: Check this works with Gnu Prolog.
   expr(+A) :- A is a legal expression in formal X10.
 */
 expr(A)   :- atomic(A).
-expr(A+B) :- expr(A), expr(B).
-expr(A*B) :- expr(A), expr(B).
-expr(A-B) :- expr(A), expr(B).
-expr(A/B) :- expr(A), expr(B).
+%expr(A+B) :- expr(A), expr(B).
+%expr(A*B) :- expr(A), expr(B).
+%expr(A-B) :- expr(A), expr(B).
+%expr(A/B) :- expr(A), expr(B).
 
 /**
  stmt(+S) :- S is a top level statement in formal X10.
@@ -278,7 +293,6 @@ A:S << A:T :- S << T.
   cft(cf:_, nil).
   cft(0:S, 0:T):- cft(S, T).
   cft(1:S, 1:T):- cft(S, T).
-%  cft(ca:S, ca:T):- cft(S, T).
 
 /** 
  The hb relation on paths from PPoPP '13 (for unclocked programs), 
@@ -326,8 +340,8 @@ A:S hb0 A:T :- S hb0 T.
 
 
 /** 
-   phi(+S, +Alpha, +B, ?N) :- 
-   the statement instance P = Alpha cf B of S is in controlled by 
+   phi(+S, +P, +Alpha, +PreB, ?N, ?Z) :- 
+   the statement instance P = Alpha cf PreB of S is in controlled by 
    a cf at path Alpha, and P has phase N on the Alpha clock. 
 
    <p>S must be a loop free program (no for-loops permitted).
@@ -343,18 +357,24 @@ A:S hb0 A:T :- S hb0 T.
    controlling clocked finish. 
 */
 
-phi(S, Alpha, B, N) :- 
+phi(S, P, Alpha, PreB, N, Z) :- 
+    alphaCFPrefix(PreB, B, Z), 
     (bagof(R, advanceBefore(S, Alpha, B, R), Rs); Rs=[]),
-    length(Rs, N).
+    length(Rs, N1),
+    path(S, P, SP), adjustPath(SP, PreB, N1, N).
+
+adjustPath(advance, Pre, M1, M):- not_cfs(Pre), M is M1+0.1.
+adjustPath(advance, Pre, M, M):- \+(not_cfs(Pre)).
+adjustPath(X, _Pre, M, M) :- X \== advance.
 
 
-  alphaCFPrefix(nil, nil, nil).
-  alphaCFPrefix(f:_, nil, nil).
+  alphaCFPrefix(nil,  nil, nil).
+  alphaCFPrefix(f:_,  nil, nil).
   alphaCFPrefix(cf:_, nil, cf).
-  alphaCFPrefix(a:_, nil, a).
-  alphaCFPrefix(0:S, 0:T, Z):- alphaCFPrefix(S, T, Z).
-  alphaCFPrefix(1:S, 1:T, Z):- alphaCFPrefix(S, T, Z).
-  alphaCFPrefix(ca:S, ca:T, Z):- alphaCFPrefix(S, T, Z).
+  alphaCFPrefix(a:_,  nil, a).
+  alphaCFPrefix(0:S,  0:T, Z):- alphaCFPrefix(S, T, Z).
+  alphaCFPrefix(1:S,  1:T, Z):- alphaCFPrefix(S, T, Z).
+  alphaCFPrefix(ca:S,ca:T, Z):- alphaCFPrefix(S, T, Z).
 
 /**
 hb(+S, +P, +Q):- 
@@ -363,38 +383,23 @@ hb(+S, +P, +Q):-
   S must be loop free.
 */
 hb(S, P, Q) :- 
-  common_cf(P, Q, Alpha, PreBP, PreBQ), 
-  %last_cf(Alpha, cf:B, Q), 
-  alphaCFPrefix(PreBQ, BQ, _), 
-  phi(S, Alpha, BQ, N1), 
-  path(S, Q, SQ), adjustPath(SQ, PreBQ, N1, N),
-  %  app(Alpha, cf:PreB, P), 
-  alphaCFPrefix(PreBP, BP, Z), Z \==a,
-  phi(S, Alpha, BP, M1), 
-  path(S, P, SP), adjustPath(SP, PreBP, M1, M),
+  app(Alpha, cf:PreBP, P), 
+  app(Alpha, cf:PreBQ, Q), 
+  ok(PreBP, PreBQ),
+  phi(S, Q, Alpha, PreBQ, N, _), 
+  phi(S, P, Alpha, PreBP, M, Z), Z \==a,
   M < N.
 
 hb(_, P, Q) :- P hb0 Q.
 
-adjustPath(advance, Pre, M1, M):- not_cfs(Pre), M is M1+0.1.
-adjustPath(advance, Pre, M, M):- \+(not_cfs(Pre)).
-adjustPath(X, _Pre, M, M) :- X \== advance.
-
-ok(0:A, 0:B) :- ok(A, B).
-ok(1:A, 1:B) :- ok(A, B).
-ok(ca:A, ca:B) :- ok(A, B).
-ok(a:A, a:B) :- ok(A, B).
-ok(f:A, f:B) :- ok(A, B).
-ok(nil, _).
-ok(_, nil).
-ok(X:_, Y:_):- X \== Y.
-
-common_cf(X, Y, Alpha, PreBX, PreBY) :- 
-  app(Alpha, cf:PreBX, X), 
-  app(Alpha, cf:PreBY, Y), 
-  ok(PreBX, PreBY).
-
-
+ok(0:A,   0:B):- ok(A, B).
+ok(1:A,   1:B):- ok(A, B).
+ok(ca:A, ca:B):- ok(A, B).
+ok(a:A,   a:B):- ok(A, B).
+ok(f:A,   f:B):- ok(A, B).
+ok(nil,     _).
+ok(_,     nil).
+ok(X:_,   Y:_):- X \== Y.
 
 /** hbProblem(+S, +P, +Q) :-
   S is a statement, P and Q are paths in it,
