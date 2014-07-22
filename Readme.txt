@@ -1,8 +1,9 @@
 Mon Jul 21 23:46:43 EDT 2014
 
-
 This project contains the Prolog source code for the structural
-operational semantics of (simplified) clocked X10 programs.
+operational semantics of (simplified) clocked X10 programs, being
+developed by Tomofumi Yuki, Paul Feautrier, Sanjay Rajopadhye and
+Vijay Saraswat.
 
 The semantics handles basic statements (skip, assignment to array
 variables, reads), async, finish, clocked async, clocked finish, and
@@ -18,7 +19,7 @@ PPoPP'13, and subsequent work to handle clock semantics, currently
 under preparation for a journal submission.
 
 The main technical result is a static characterization of the happens
-before relation on substatements P and Q of a statement S. P hb Q
+before relation on basic sub-statements P and Q of a statement S. P hb Q
 should be the case precisely when in all execution sequences for S the
 step labeled with P occurs before the step labeled with Q.
 
@@ -26,6 +27,6 @@ The characterization for hb for clock-free programs is very simple and
 given in PPoPP'13. This project contains the characterization for
 arbitrary clocked programs.
 
-For people looking to  udnerstad this code the place to sart with is
-smallx10.pl. It is an extract of x10.pl that provides only the core
+People looking to  understand this code should start with
+smallx10.pl. It is an extract of x10.pl that provides only the core 
 reduction predicates.
