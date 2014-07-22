@@ -25,3 +25,7 @@ step labeled with P occurs before the step labeled with Q.
 The characterization for hb for clock-free programs is very simple and
 given in PPoPP'13. This project contains the characterization for
 arbitrary clocked programs.
+
+For people looking to  udnerstad this code the place to sart with is
+smallx10.pl. It is an extract of x10.pl that provides only the core
+reduction predicates.
