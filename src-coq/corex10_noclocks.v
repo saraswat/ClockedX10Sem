@@ -184,14 +184,24 @@ Inductive deriv: config -> config -> pth -> Prop :=
                                (c (Xfor pth x (val (lo+1))(val hi) (substS pth s x (val lo)) p)  hh) p
 .
 
+
+
 Inductive reduce: config -> config -> list pth -> Prop :=
-  | reduce_b: forall s h p, deriv (c s h) (t h) p -> reduce (c s h) (t h) (p::nil)
+  | reduce_b: forall s h hh p, deriv (c s h) (t hh) p -> reduce (c s h) (t hh) (p::nil)
   | reduce_r: forall s ss h hh hhh p ps, deriv (c s h) (c ss hh) p
                             -> reduce (c ss hh) (t hhh) ps -> reduce (c s h) (t hhh) (p::ps).
 
 Inductive starReduce: ustmt -> heap -> list pth -> Prop := 
   | starRed: forall s h ps, reduce (c (annotate s) null) (t h) ps -> starReduce s h ps.
   
+Theorem no_stuck_aux: forall s, exists h ps, 
+  reduce (c (ann2 s nil) null) (t h) ps.
+Proof.
+  induction s; go.
+  - simpl.
+    do 2 econstructor.
+    eapply reduce_b.
+
 Theorem no_stuck: forall s, exists h ps, starReduce s h ps.
 
 Lemma hb0_implies_precedence: 
