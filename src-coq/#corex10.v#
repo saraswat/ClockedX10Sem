@@ -156,7 +156,7 @@ induction S. (* a simple reasonning by case is not enough, we need induction *)
     + left; constructor; auto.
 Qed.
 
-Theorem sync_or_async: forall A S, (isSync A S) \/ (isAsync A S).(* The same proof with more automation *)
+Theorem sync_or_async2: forall A S, (isSync A S) \/ (isAsync A S). (* The same proof with more automation *)
 
 (* A custom tactic I use very often (a bit simplified here) *)
 Ltac go := 
