@@ -155,6 +155,28 @@ induction S. (* a simple reasonning by case is not enough, we need induction *)
     + left; constructor; auto.
 Qed.
 
+Theorem sync_or_async: forall A S, (isSync A S) \/ (isAsync A S).(* The same proof with more automation *)
+
+(* A custom tactic I use very often (a bit simplified here) *)
+Ltac go := 
+  try congruence; 
+  try econstructor (solve[go]).
+
+Theorem sync_or_async_v2: forall A S, (isSync A S) \/ (isAsync A S).
+Proof.  
+  induction S; go. 
+  - intuition; go. (* [intuition] will make all disjunction cases *)
+  - intuition; go. 
+Qed.
+
+Theorem sync_or_async_v3: forall A S, (isSync A S) \/ (isAsync A S).
+Proof.  
+  induction S; intuition; go. 
+Qed.
+
+
+
+
 Inductive hasYield: annStmt -> annStmt -> bool -> Prop :=
   | hasYield_ad: forall p, hasYield (Advance pth p)(Skip pth p) true
   | hasYield_ca: forall S SS p B, hasYield S SS B 
