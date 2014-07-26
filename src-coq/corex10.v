@@ -29,23 +29,39 @@ Inductive heap : Type :=
 (* We choose to define stmt as a function from types
   so that we can annotate a statement with any kind of value.
   In reality, we are only interested in stmt unit and stmt (List asn). *)
+
 Inductive stmt (A : Type) : Type:=
-| Advance(a:A) : stmt A
 | Skip(a:A) : stmt A
 | Local (e:var)(a:A) : stmt A
 | Assign (l:var) (i:expr) (r:expr)(a:A) : stmt A    (* L[I] = R *)
-| Xseq (c1:stmt A) (c2:stmt A)(a:A)  : stmt A
+| Xseq (c1:unclocked_stmt A) (c2:stmt A)(a:A)  : stmt A
 | Xfor (x:var) (l:expr) (u:expr) (s:stmt A) (a:A) : stmt A
 | Async (c:stmt A)(a:A) : stmt A
 | Finish (c:stmt A)(a:A) : stmt A
-| ClockedAsync (c:stmt A)(a:A): stmt A
-| ClockedFinish (c:stmt A)(a:A) : stmt A.
+| ClockedFinish (c:clocked_stmt A)(a:A): stmt A
+
+(* A clocked_stmt has access to the implicit clock
+  introduced by a clockedFinish, hence it may occur
+  only inside a clockedFinish.*)
+Inductive clocked_stmt (A : Type) : Type:=
+| Advance(a:A) : clocked_stmt A
+| cSkip(a:A) : clocked_stmt A
+| cLocal (e:var)(a:A) : clocked_stmt A
+| cAssign (l:var) (i:expr) (r:expr)(a:A) : clocked_stmt A    (* L[I] = R *)
+| cXseq (c1:stmt A) (c2:stmt A)(a:A)  : clocked_stmt A
+| cXfor (x:var) (l:expr) (u:expr) (s:clocked_stmt A) (a:A) : clocked_stmt A
+| cAsync (c:unclocked_stmt A)(a:A) : clocked_stmt A
+| cFinish (c:unclocked_stmt A)(a:A) : clocked_stmt A
+| ClockedAsync (c:clocked_stmt A)(a:A): clocked_stmt A
+| cClockedFinish (c:clocked_stmt A)(a:A) : clocked_stmt A.
 
 Definition ustmt := stmt unit.
+Definition ucstmt := clocked_stmt unit.
 Definition pth := list asn.
-Definition annStmt := stmt pth.
+Definition ann_stmt := stmt pth.
+Definition ann_cstmt := clocked_stmt pth.
 
-Definition advance:ustmt := Advance unit tt.
+Definition advance:ucstmt := Advance unit tt.
 Definition skip:ustmt := Skip unit tt.
 Definition local (e:var):ustmt := Local unit e tt.
 Definition assign (l:var)(i:expr) (r:expr):ustmt := Assign unit l i r tt.
@@ -68,7 +84,7 @@ Inductive path A: stmt A -> list asn -> stmt A -> Prop :=
  | path_ca: forall a S P U, path A S P U -> path A (ClockedAsync A S a) (ca:: P) U
  | path_cf: forall a S P U, path A S P U -> path A (ClockedFinish A S a) (cf :: P) U.
 
-Fixpoint ann2 (s:ustmt) (p: list asn):annStmt  :=
+Fixpoint ann2 (s:ustmt) (p:pth):ann_stmt  :=
   match s with
    | Advance x => Advance pth p
    | Skip x =>  Skip pth p
@@ -82,7 +98,7 @@ Fixpoint ann2 (s:ustmt) (p: list asn):annStmt  :=
    | ClockedFinish s x => ClockedFinish pth (ann2 s (p ++ cf::nil)) p
 end.
 
-Definition annotate (s:ustmt) : annStmt :=  ann2 s nil.
+Definition annotate (s:ustmt) : ann_stmt :=  ann2 s nil.
 
 Definition eq_nat : forall (x y:nat), {x=y}+{x<>y}.
 Proof. decide equality. Qed.
@@ -175,7 +191,7 @@ Proof.
   induction S; intuition; go. 
 Qed.
 
-Inductive hasYield: annStmt -> annStmt -> bool -> Prop :=
+Inductive hasYield: ann_stmt -> ann_stmt -> bool -> Prop :=
   | hasYield_ad: forall p, hasYield (Advance pth p)(Skip pth p) true
   | hasYield_ca: forall S SS p B, hasYield S SS B 
     -> hasYield (ClockedAsync pth S p) (ClockedAsync pth SS p) B
@@ -187,7 +203,7 @@ Inductive hasYield: annStmt -> annStmt -> bool -> Prop :=
   | hasYield_async: forall S SS p, hasYield (Async pth S p) (Async pth SS p) false.
 
 Inductive config: Type :=
-  | c(a:annStmt)(h:heap):config
+  | c(a:ann_stmt)(h:heap):config
   | t(h:heap): config.
 
 
@@ -237,7 +253,7 @@ Inductive starReduce: ustmt -> heap -> list pth -> Prop :=
   | starRed: forall s h ps, reduce (c (annotate s) null) (t h) ps -> starReduce s h ps.
   
 
-
+Theorem no_stuck: forall s, exists h ps, unclocked_stmt(
 Check clockedFinish skip.
 Check clockedFinish (xseq  (assign x (val 0) (val 0)) (clockedAsync skip)).
 
